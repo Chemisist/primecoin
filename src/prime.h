@@ -93,7 +93,7 @@ class CSieveOfEratosthenes
 
 
 public:
-    unsigned long sieveBuildTime;
+    int64 sieveBuildTime;
 
     CSieveOfEratosthenes(unsigned int nSieveSize, unsigned int nBits, uint256 hashBlockHeader, CBigNum& bnFixedMultiplier)
     {
