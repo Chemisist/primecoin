@@ -352,7 +352,7 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
     }
     fNewBlock = false;
 
-    int64 nStart, nCurrent, nSearch; // microsecond timer
+    int64 nStart, nCurrent, nSearch, tmpBuildTime; // microsecond timer
     CBlockIndex* pindexPrev = pindexBest;
 	if(sieveBuildTime == 0) {
 		sieveBuildTime = (int)GetArg("-gensieveroundlimitms", 400000);
@@ -360,9 +360,13 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
     if (psieve.get() == NULL)
     {
         // Build sieve
+        if(psieve->sieveBuildTime != 0) {
+		tmpBuildTime = sieveBuildTime;
+	}
+		
         nStart = GetTimeMicros();
         psieve.reset(new CSieveOfEratosthenes(nMaxSieveSize, block.nBits, block.GetHeaderHash(), bnFixedMultiplier));
-        
+        psieve->sieveBuildTime = tmpBuildTime;
     //    while (psieve->Weave() && pindexPrev == pindexBest && (GetTimeMicros() - nStart < sieveBuildTime));
 	psieve->Weave_Chemisist(pindexPrev, pindexBest);
         if (fDebug && GetBoolArg("-printmining"))
