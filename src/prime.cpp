@@ -354,7 +354,7 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
 
     int64 nStart, nCurrent, nSearch; // microsecond timer
     CBlockIndex* pindexPrev = pindexBest;
-    if(sieveBuildTime == 0) {
+	if(sieveBuildTime == 0) {
 		sieveBuildTime = (int)GetArg("-gensieveroundlimitms", 400000);
 	}
     if (psieve.get() == NULL)
@@ -364,7 +364,7 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
         psieve.reset(new CSieveOfEratosthenes(nMaxSieveSize, block.nBits, block.GetHeaderHash(), bnFixedMultiplier));
         
     //    while (psieve->Weave() && pindexPrev == pindexBest && (GetTimeMicros() - nStart < sieveBuildTime));
-	psieve->Weave_Chemisist(sieveBuildTime, pindexPrev, pindexBest);
+	psieve->Weave_Chemisist(pindexPrev, pindexBest);
         if (fDebug && GetBoolArg("-printmining"))
             printf("\nTimers: MineProbablePrimeChain() : new sieve (%u/%u@%u%%) ready with numCandidates: %u %u ", psieve->GetCandidateCount(), nMaxSieveSize, psieve->GetProgressPercentage(), psieve->GetCandidateCount(), (unsigned int) (GetTimeMicros() - nStart)/1000);
     }
@@ -591,7 +591,7 @@ bool CSieveOfEratosthenes::Weave()
 
 unsigned static int TESTING_FREQUENCY = 1000;
 
-void CSieveOfEratosthenes::Weave_Chemisist(int64 nSieveRoundLimit, CBlockIndex* pindexPrev, CBlockIndex* pindexBest) {
+void CSieveOfEratosthenes::Weave_Chemisist(CBlockIndex* pindexPrev, CBlockIndex* pindexBest) {
     int64 nStart = GetTimeMicros(), nCurrent = GetTimeMicros();
     bool keepWeaving = true;
     CAutoBN_CTX pctx;
@@ -602,7 +602,6 @@ void CSieveOfEratosthenes::Weave_Chemisist(int64 nSieveRoundLimit, CBlockIndex* 
     unsigned int nChainLength2 = 2*nChainLength;
     unsigned int nSolvedMultiplier, nVariableMultiplier, nBiTwinSeq, uP;
     unsigned int nPrimeSeqMax;
-    int64 timeLimit = nSieveRoundLimit;
     if(vPrimes[vPrimes.size()-1] < nSieveSize) {
         nPrimeSeqMax = vPrimes.size();
     } else {
