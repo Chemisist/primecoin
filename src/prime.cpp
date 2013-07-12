@@ -8,7 +8,7 @@
 std::vector<unsigned int> vPrimes;
 static const unsigned int nPrimeTableLimit = nMaxSieveSize;
 static volatile unsigned int timeouts = 0, completed = 0;
-static volatile int sieveBuildTime = 0;
+// static volatile int sieveBuildTime = 0;
 void GeneratePrimeTable()
 {
     vPrimes.clear();
@@ -344,30 +344,31 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
     nProbableChainLength = 0;
     nTests = 0;
     nPrimesHit = 0;
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
 
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
     if (fNewBlock && psieve.get() != NULL)
     {
         // Must rebuild the sieve
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
         psieve.reset();
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
     }
     fNewBlock = false;
 
-    int64 nStart, nCurrent, nSearch, tmpBuildTime; // microsecond timer
+    int64 nStart, nCurrent, nSearch, tmpBuildTime=0; // microsecond timer
     CBlockIndex* pindexPrev = pindexBest;
-	if(sieveBuildTime == 0) {
-		sieveBuildTime = (int)GetArg("-gensieveroundlimitms", 400000);
-	}
+
     if (psieve.get() == NULL)
     {
         // Build sieve
-        if(psieve->sieveBuildTime != 0) {
-		tmpBuildTime = sieveBuildTime;
-	}
 		
         nStart = GetTimeMicros();
         psieve.reset(new CSieveOfEratosthenes(nMaxSieveSize, block.nBits, block.GetHeaderHash(), bnFixedMultiplier));
-        psieve->sieveBuildTime = tmpBuildTime;
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
+	psieve.get()->sieveBuildTime = (int)GetArg("-gensieveroundlimitms", 500000);
     //    while (psieve->Weave() && pindexPrev == pindexBest && (GetTimeMicros() - nStart < sieveBuildTime));
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
 	psieve->Weave_Chemisist(pindexPrev, pindexBest);
         if (fDebug && GetBoolArg("-printmining"))
             printf("\nTimers: MineProbablePrimeChain() : new sieve (%u/%u@%u%%) ready with numCandidates: %u %u ", psieve->GetCandidateCount(), nMaxSieveSize, psieve->GetProgressPercentage(), psieve->GetCandidateCount(), (unsigned int) (GetTimeMicros() - nStart)/1000);
@@ -375,37 +376,50 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
 
     CBigNum bnChainOrigin;
 
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
     nStart = GetTimeMicros();
     nCurrent = nStart;
 
-    while (nCurrent - nStart < sieveBuildTime*3 && nCurrent >= nStart)
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
+    while (nCurrent - nStart < (psieve.get()->sieveBuildTime)*3 && nCurrent >= nStart)
     {
+
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
     	if(pindexPrev != pindexBest) {
         	if (fDebug && GetBoolArg("-printmining"))
 			printf("%u ms (Timers: pindexPrev != pindexBest: %u\n", (unsigned int) (GetTimeMicros() - nStart)/1000, completed);
 		return false;
 	}
 	nTests++;
+
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
         if (!psieve->GetNextCandidateMultiplier(nTriedMultiplier))
         {
+		//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
+			nSearch = GetTimeMicros() - nStart;
+			if(nSearch < psieve.get()->sieveBuildTime) {
+			//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
+				psieve.get()->sieveBuildTime *= 0.99;
+			} else {
+			//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
+				psieve.get()->sieveBuildTime *= 1.01;
+			}
+            if (fDebug && GetBoolArg("-printmining"))
+	        	printf("%u ms (Timers: num power tests completed: %u\n", (unsigned int) (GetTimeMicros() - nStart)/1000, completed);
             // power tests completed for the sieve
             psieve.reset();
             fNewBlock = true; // notify caller to change nonce
-	    completed++;
-	    nSearch = GetTimeMicros() - nStart;
-	    if(nSearch < sieveBuildTime) {
-		sieveBuildTime *= 0.99;
-	    } else {
-		sieveBuildTime *= 1.01;
-	    }
-            if (fDebug && GetBoolArg("-printmining"))
-	        printf("%u ms (Timers: num power tests completed: %u\n", (unsigned int) (GetTimeMicros() - nStart)/1000, completed);
+			completed++;
             return false;
         }
+
+	//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
         bnChainOrigin = CBigNum(block.GetHeaderHash()) * bnFixedMultiplier * nTriedMultiplier;
         unsigned int nChainLengthCunningham1 = 0;
         unsigned int nChainLengthCunningham2 = 0;
         unsigned int nChainLengthBiTwin = 0;
+
+	//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
         if (ProbablePrimeChainTest(bnChainOrigin, block.nBits, false, nChainLengthCunningham1, nChainLengthCunningham2, nChainLengthBiTwin))
         {
             block.bnPrimeChainMultiplier = bnFixedMultiplier * nTriedMultiplier;
@@ -414,6 +428,8 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
             nProbableChainLength = std::max(std::max(nChainLengthCunningham1, nChainLengthCunningham2), nChainLengthBiTwin);
             return true;
         }
+	
+	//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
         nProbableChainLength = std::max(std::max(nChainLengthCunningham1, nChainLengthCunningham2), nChainLengthBiTwin);
         if(TargetGetLength(nProbableChainLength) >= 1)
             nPrimesHit++;
@@ -421,7 +437,8 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
         nCurrent = GetTimeMicros();
     }
 	timeouts++;
-	sieveBuildTime *= 1.025;
+//\tprintf("\\nMineProbablePrimeChain() Line: %d", __LINE__);
+	psieve.get()->sieveBuildTime *= 1.025;
         if (fDebug && GetBoolArg("-printmining"))
 	    printf("%u ms (Timers: num total time outs: %u\n", (unsigned int) (GetTimeMicros() - nStart)/1000, completed);
 
