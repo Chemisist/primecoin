@@ -389,7 +389,7 @@ bool MineProbablePrimeChain(CBlock& block, CBigNum& bnFixedMultiplier, bool& fNe
             fNewBlock = true; // notify caller to change nonce
 	    completed++;
 	    nSearch = GetTimeMicros() - nStart;
-	    if(2*nSearch < sieveBuildTime) {
+	    if(nSearch < sieveBuildTime) {
 		sieveBuildTime *= 0.99;
 	    } else {
 		sieveBuildTime *= 1.01;
